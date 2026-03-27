@@ -42,6 +42,7 @@ class MemoryGameApp:
         bg_primary = self.theme_manager.get("bg_primary")
         bg_secondary = self.theme_manager.get("bg_secondary")
         text_primary = self.theme_manager.get("text_primary")
+        text_muted = self.theme_manager.get("text_muted")
         
         # Основное окно
         self.root.configure(bg=bg_primary)
@@ -60,10 +61,16 @@ class MemoryGameApp:
             self.cards_frame.configure(bg=bg_primary)
         
         # Обновление панели рекордов
+        if hasattr(self, 'scores_frame'):
+            self.scores_frame.configure(bg=bg_secondary)
         if hasattr(self, 'scores_canvas'):
             self.scores_canvas.configure(bg=bg_primary)
         if hasattr(self, 'scores_list_frame'):
             self.scores_list_frame.configure(bg=bg_primary)
+        
+        # Обновление footer
+        if hasattr(self, 'footer'):
+            self.footer.configure(bg=bg_secondary)
         
         # Перерисовка карточек с новой темой
         for card in self.cards:
@@ -85,7 +92,7 @@ class MemoryGameApp:
             for widget in self._scores_header_widgets:
                 widget.config(bg=bg_tertiary, fg=text_primary)
         
-        # Обновление панели рекордов
+        # Обновление панели рекордов (перерисовка строк)
         self._update_scores_display()
     
     def _toggle_theme(self):
@@ -170,6 +177,9 @@ class MemoryGameApp:
         footer.pack(fill=tk.X, padx=0, pady=(10, 0))
         footer.pack_propagate(False)
         
+        # Сохраняем ссылку для обновления темы
+        self.footer = footer
+        
         size_label = tk.Label(
             footer, text="Размер:",
             font=("Segoe UI", 12), bg=bg, fg=self.theme_manager.get("text_primary"),
@@ -177,19 +187,19 @@ class MemoryGameApp:
         size_label.pack(side=tk.LEFT, padx=10)
         
         self.size_var = tk.StringVar(value=DEFAULT_SIZE)
-        size_combo = ttk.Combobox(
+        self.size_combo = ttk.Combobox(
             footer, textvariable=self.size_var,
             values=list(GAME_SIZES.keys()), state="readonly", width=8,
         )
-        size_combo.pack(side=tk.LEFT, padx=5)
-        size_combo.bind("<<ComboboxSelected>>", lambda e: self._on_size_selected(GAME_SIZES))
+        self.size_combo.pack(side=tk.LEFT, padx=5)
+        self.size_combo.bind("<<ComboboxSelected>>", lambda e: self._on_size_selected(GAME_SIZES))
         
-        new_game_btn = tk.Button(
+        self.new_game_btn = tk.Button(
             footer, text="🔄 Новая игра",
             font=("Segoe UI", 12, "bold"), bg=self.theme_manager.get("accent"), fg="#ffffff",
             border=0, padx=20, pady=8, cursor="hand2", command=self._on_new_game,
         )
-        new_game_btn.pack(side=tk.RIGHT, padx=10)
+        self.new_game_btn.pack(side=tk.RIGHT, padx=10)
         self.size_var.trace_add("write", self._on_size_change)
     
     def _create_scores_panel(self):
@@ -197,6 +207,9 @@ class MemoryGameApp:
         scores_frame = tk.Frame(self.main_container, bg=bg, width=320)
         scores_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=(10, 0))
         scores_frame.pack_propagate(False)
+        
+        # Сохраняем ссылки для обновления темы
+        self.scores_frame = scores_frame
         
         title = tk.Label(
             scores_frame, text="🏆 Рекорды",
@@ -212,12 +225,12 @@ class MemoryGameApp:
         
         self.score_size_var = tk.StringVar(value="Все")
         score_sizes = ["Все"] + list(GAME_SIZES.keys())
-        score_filter = ttk.Combobox(
+        self.score_filter = ttk.Combobox(
             scores_frame, textvariable=self.score_size_var,
             values=score_sizes, state="readonly", width=10,
         )
-        score_filter.pack(pady=(0, 10))
-        score_filter.bind("<<ComboboxSelected>>", lambda e: self._update_scores_display())
+        self.score_filter.pack(pady=(0, 10))
+        self.score_filter.bind("<<ComboboxSelected>>", lambda e: self._update_scores_display())
         
         scores_container = tk.Frame(scores_frame, bg=self.theme_manager.get("bg_primary"))
         scores_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -228,12 +241,12 @@ class MemoryGameApp:
         self.scores_list_frame.bind("<Configure>", lambda e: self.scores_canvas.configure(scrollregion=self.scores_canvas.bbox("all")))
         self.scores_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
-        clear_btn = tk.Button(
+        self.clear_scores_btn = tk.Button(
             scores_frame, text="🗑️ Очистить",
             font=("Segoe UI", 10), bg=self.theme_manager.get("accent"), fg="#ffffff",
             border=0, padx=15, pady=5, cursor="hand2", command=self._clear_scores,
         )
-        clear_btn.pack(pady=10)
+        self.clear_scores_btn.pack(pady=10)
         
         self._update_scores_display()
     
