@@ -58,6 +58,12 @@ class MemoryGameApp:
             self.header.configure(bg=bg_secondary)
         if hasattr(self, 'header_title'):
             self.header_title.configure(bg=bg_secondary, fg=accent)
+        if hasattr(self, 'header_stats_frame'):
+            self.header_stats_frame.configure(bg=bg_secondary)
+        
+        # Обновление game_frame
+        if hasattr(self, 'game_frame'):
+            self.game_frame.configure(bg=bg_primary)
         
         # Обновление игрового поля
         if hasattr(self, 'board_container'):
@@ -80,6 +86,9 @@ class MemoryGameApp:
             self.scores_title.configure(bg=bg_secondary, fg=accent)
         if hasattr(self, 'scores_filter_label'):
             self.scores_filter_label.configure(bg=bg_secondary, fg=text_primary)
+        if hasattr(self, 'score_filter'):
+            # Combobox не меняет цвет фона напрямую, но можно обновить стиль
+            pass
         if hasattr(self, 'scores_canvas'):
             self.scores_canvas.configure(bg=bg_primary)
         if hasattr(self, 'scores_list_frame'):
@@ -116,6 +125,10 @@ class MemoryGameApp:
     def _create_game_panel(self):
         game_frame = tk.Frame(self.main_container, bg=self.theme_manager.get("bg_primary"))
         game_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=False)
+        
+        # Сохраняем ссылку для обновления темы
+        self.game_frame = game_frame
+        
         self._create_header(game_frame)
         self._create_board_frame(game_frame)
         self._create_footer(game_frame)
@@ -125,8 +138,8 @@ class MemoryGameApp:
         header = tk.Frame(parent, bg=bg, height=60)
         header.pack(fill=tk.X, padx=0, pady=(0, 10))
         header.pack_propagate(False)
-        
-        # Сохраняем ссылку для обновления темы
+
+        # Сохраняем ссылки для обновления темы
         self.header = header
 
         self.header_title = tk.Label(
@@ -136,17 +149,17 @@ class MemoryGameApp:
         )
         self.header_title.pack(side=tk.LEFT, padx=10)
 
-        stats_frame = tk.Frame(header, bg=bg)
-        stats_frame.pack(side=tk.RIGHT, padx=10)
+        self.header_stats_frame = tk.Frame(header, bg=bg)
+        self.header_stats_frame.pack(side=tk.RIGHT, padx=10)
 
         self.moves_label = tk.Label(
-            stats_frame, text="Ходы: 0",
+            self.header_stats_frame, text="Ходы: 0",
             font=("Segoe UI", 14), bg=bg, fg=self.theme_manager.get("text_primary"),
         )
         self.moves_label.pack(side=tk.LEFT, padx=10)
 
         self.pairs_label = tk.Label(
-            stats_frame, text="Пар: 0/0",
+            self.header_stats_frame, text="Пар: 0/0",
             font=("Segoe UI", 14), bg=bg, fg=self.theme_manager.get("text_primary"),
         )
         self.pairs_label.pack(side=tk.LEFT, padx=10)
