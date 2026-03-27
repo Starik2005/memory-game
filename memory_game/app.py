@@ -27,8 +27,8 @@ class MemoryGameApp:
         self.root = root if root else tk.Tk()
         self.root.title("🎮 Memory Game")
         self.root.configure(bg="#1a1a2e")
-        self.root.geometry("1100x700")
-        self.root.minsize(800, 500)
+        self.root.geometry("950x700")
+        self.root.minsize(950, 500)
         
         self.game: Optional[MemoryGame] = None
         self.cards: List[CardWidget] = []
@@ -47,7 +47,7 @@ class MemoryGameApp:
     
     def _create_game_panel(self):
         game_frame = tk.Frame(self.main_container, bg="#1a1a2e")
-        game_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        game_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=False)
         
         self._create_header(game_frame)
         self._create_board_frame(game_frame)
@@ -81,23 +81,17 @@ class MemoryGameApp:
         self.pairs_label.pack(side=tk.LEFT, padx=10)
     
     def _create_board_frame(self, parent):
-        self.board_container = tk.Frame(parent, bg="#1a1a2e")
+        self.board_container = tk.Frame(parent, bg="#1a1a2e", width=600)
         self.board_container.pack(fill=tk.BOTH, expand=True, padx=0, pady=5)
+        self.board_container.pack_propagate(False)
         
         self.board_canvas = tk.Canvas(self.board_container, bg="#1a1a2e", highlightthickness=0)
-        
-        v_scrollbar = ttk.Scrollbar(self.board_container, orient=tk.VERTICAL, command=self.board_canvas.yview)
-        h_scrollbar = ttk.Scrollbar(self.board_container, orient=tk.HORIZONTAL, command=self.board_canvas.xview)
-        
-        self.board_canvas.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
         
         self.cards_frame = tk.Frame(self.board_canvas, bg="#1a1a2e")
         
         self.board_window = self.board_canvas.create_window((0, 0), window=self.cards_frame, anchor="nw")
         self.cards_frame.bind("<Configure>", self._on_frame_configure)
         
-        v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
         self.board_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         self.board_canvas.bind("<Configure>", self._on_canvas_resize)
@@ -146,7 +140,7 @@ class MemoryGameApp:
         self.size_var.trace_add("write", self._on_size_change)
     
     def _create_scores_panel(self):
-        scores_frame = tk.Frame(self.main_container, bg="#16213e", width=280)
+        scores_frame = tk.Frame(self.main_container, bg="#16213e", width=320)
         scores_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=(10, 0))
         scores_frame.pack_propagate(False)
         
@@ -176,14 +170,11 @@ class MemoryGameApp:
         scores_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         self.scores_canvas = tk.Canvas(scores_container, bg="#1a1a2e", highlightthickness=0)
-        scores_scrollbar = ttk.Scrollbar(scores_container, orient=tk.VERTICAL, command=self.scores_canvas.yview)
-        self.scores_canvas.configure(yscrollcommand=scores_scrollbar.set)
         
         self.scores_list_frame = tk.Frame(self.scores_canvas, bg="#1a1a2e")
         self.scores_canvas.create_window((0, 0), window=self.scores_list_frame, anchor="nw")
         self.scores_list_frame.bind("<Configure>", lambda e: self.scores_canvas.configure(scrollregion=self.scores_canvas.bbox("all")))
         
-        scores_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.scores_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         clear_btn = tk.Button(
@@ -238,7 +229,7 @@ class MemoryGameApp:
         tk.Label(header, text="#", font=("Segoe UI", 10, "bold"), bg="#2c3e50", fg="#ffffff", width=3).pack(side=tk.LEFT, padx=5)
         tk.Label(header, text="Поле", font=("Segoe UI", 10, "bold"), bg="#2c3e50", fg="#ffffff", width=6).pack(side=tk.LEFT, padx=5)
         tk.Label(header, text="Ходы", font=("Segoe UI", 10, "bold"), bg="#2c3e50", fg="#ffffff", width=6).pack(side=tk.LEFT, padx=5)
-        tk.Label(header, text="Дата", font=("Segoe UI", 10, "bold"), bg="#2c3e50", fg="#ffffff").pack(side=tk.LEFT, padx=5)
+        tk.Label(header, text="Дата", font=("Segoe UI", 10, "bold"), bg="#2c3e50", fg="#ffffff", width=14).pack(side=tk.LEFT, padx=5)
         
         for i, score in enumerate(scores, 1):
             row = tk.Frame(self.scores_list_frame, bg="#1a1a2e")
@@ -250,7 +241,7 @@ class MemoryGameApp:
             tk.Label(row, text=str(i), font=("Segoe UI", 10), bg=bg_color, fg="#ecf0f1", width=3, anchor="w").pack(side=tk.LEFT, padx=5)
             tk.Label(row, text=f"{score['size']}×{score['size']}", font=("Segoe UI", 10), bg=bg_color, fg="#3498db", width=6, anchor="w").pack(side=tk.LEFT, padx=5)
             tk.Label(row, text=str(score['moves']), font=("Segoe UI", 10, "bold"), bg=bg_color, fg="#e94560", width=6, anchor="w").pack(side=tk.LEFT, padx=5)
-            tk.Label(row, text=score['date'], font=("Segoe UI", 9), bg=bg_color, fg="#95a5a6").pack(side=tk.LEFT, padx=5)
+            tk.Label(row, text=score['date'], font=("Segoe UI", 9), bg=bg_color, fg="#95a5a6", width=14, anchor="w").pack(side=tk.LEFT, padx=5)
         
         if self.game:
             best = self.score_manager.get_best_for_size(self.game.size)
