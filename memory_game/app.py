@@ -51,6 +51,20 @@ class MemoryGameApp:
         if hasattr(self, 'theme_btn'):
             self.theme_btn.config(text="☀️" if self.theme_manager.is_dark() else "🌙")
         
+        # Обновление игрового поля
+        if hasattr(self, 'board_container'):
+            self.board_container.configure(bg=bg_primary)
+        if hasattr(self, 'board_canvas'):
+            self.board_canvas.configure(bg=bg_primary)
+        if hasattr(self, 'cards_frame'):
+            self.cards_frame.configure(bg=bg_primary)
+        
+        # Обновление панели рекордов
+        if hasattr(self, 'scores_canvas'):
+            self.scores_canvas.configure(bg=bg_primary)
+        if hasattr(self, 'scores_list_frame'):
+            self.scores_list_frame.configure(bg=bg_primary)
+        
         # Перерисовка карточек с новой темой
         for card in self.cards:
             card.theme = self.theme_manager
