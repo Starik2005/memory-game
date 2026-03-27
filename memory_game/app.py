@@ -7,99 +7,183 @@ from typing import List, Optional
 from .game import MemoryGame
 from .card_widget import CardWidget
 from .scores import ScoreManager
+from .theme import ThemeManager
 
 
-# Доступные размеры поля (только чётные)
-GAME_SIZES = {
-    "4×4": 4,
-    "6×6": 6,
-    "8×8": 8,
-    "10×10": 10,
-    "12×12": 12,
-}
+GAME_SIZES = {"4×4": 4, "6×6": 6, "8×8": 8, "10×10": 10, "12×12": 12}
 DEFAULT_SIZE = "6×6"
 
 
 class MemoryGameApp:
-    """Основное приложение Memory Game."""
-    
     def __init__(self, root: Optional[tk.Tk] = None):
         self.root = root if root else tk.Tk()
         self.root.title("🎮 Memory Game")
-        self.root.configure(bg="#1a1a2e")
-        self.root.geometry("1100x700")
-        self.root.minsize(800, 500)
+        self.root.geometry("950x700")
+        self.root.minsize(950, 500)
         
         self.game: Optional[MemoryGame] = None
         self.cards: List[CardWidget] = []
         self.score_manager = ScoreManager()
+        self.theme_manager = ThemeManager()
         self._flip_after_id: Optional[str] = None
         
         self._setup_ui()
         self.new_game(6)
     
     def _setup_ui(self):
-        self.main_container = tk.Frame(self.root, bg="#1a1a2e")
+        self.main_container = tk.Frame(self.root, bg=self.theme_manager.get("bg_primary"))
         self.main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
         self._create_game_panel()
         self._create_scores_panel()
+        self._apply_theme_colors()  # Применить цвета сразу после создания
+    
+    def _apply_theme_colors(self):
+        """Применить цвета текущей темы ко всем элементам без пересоздания."""
+        bg_primary = self.theme_manager.get("bg_primary")
+        bg_secondary = self.theme_manager.get("bg_secondary")
+        text_primary = self.theme_manager.get("text_primary")
+        text_muted = self.theme_manager.get("text_muted")
+        accent = self.theme_manager.get("accent")
+        
+        # Основное окно
+        self.root.configure(bg=bg_primary)
+        self.main_container.configure(bg=bg_primary)
+        
+        # Обновление кнопки темы
+        if hasattr(self, 'theme_btn'):
+            self.theme_btn.config(text="☀️" if self.theme_manager.is_dark() else "🌙")
+        
+        # Обновление header
+        if hasattr(self, 'header'):
+            self.header.configure(bg=bg_secondary)
+        if hasattr(self, 'header_title'):
+            self.header_title.configure(bg=bg_secondary, fg=accent)
+        if hasattr(self, 'header_stats_frame'):
+            self.header_stats_frame.configure(bg=bg_secondary)
+        
+        # Обновление game_frame
+        if hasattr(self, 'game_frame'):
+            self.game_frame.configure(bg=bg_primary)
+        
+        # Обновление игрового поля
+        if hasattr(self, 'board_container'):
+            self.board_container.configure(bg=bg_primary)
+        if hasattr(self, 'board_canvas'):
+            self.board_canvas.configure(bg=bg_primary)
+        if hasattr(self, 'cards_frame'):
+            self.cards_frame.configure(bg=bg_primary)
+        
+        # Обновление footer
+        if hasattr(self, 'footer'):
+            self.footer.configure(bg=bg_secondary)
+        if hasattr(self, 'footer_size_label'):
+            self.footer_size_label.configure(bg=bg_secondary, fg=text_primary)
+        
+        # Обновление панели рекордов
+        if hasattr(self, 'scores_frame'):
+            self.scores_frame.configure(bg=bg_secondary)
+        if hasattr(self, 'scores_title'):
+            self.scores_title.configure(bg=bg_secondary, fg=accent)
+        if hasattr(self, 'scores_filter_label'):
+            self.scores_filter_label.configure(bg=bg_secondary, fg=text_primary)
+        if hasattr(self, 'score_filter'):
+            # Combobox не меняет цвет фона напрямую, но можно обновить стиль
+            pass
+        if hasattr(self, 'scores_canvas'):
+            self.scores_canvas.configure(bg=bg_primary)
+        if hasattr(self, 'scores_list_frame'):
+            self.scores_list_frame.configure(bg=bg_primary)
+        
+        # Перерисовка карточек с новой темой
+        for card in self.cards:
+            card.theme = self.theme_manager
+            if card.is_flipped or card.is_matched:
+                card._draw_front()
+            else:
+                card._draw_back()
+        
+        # Обновление статистики
+        if hasattr(self, 'moves_label'):
+            self.moves_label.config(bg=bg_secondary, fg=text_primary)
+        if hasattr(self, 'pairs_label'):
+            self.pairs_label.config(bg=bg_secondary, fg=text_primary)
+        
+        # Обновление заголовков таблицы рекордов
+        if hasattr(self, '_scores_header_widgets'):
+            bg_tertiary = self.theme_manager.get("bg_tertiary")
+            for widget in self._scores_header_widgets:
+                widget.config(bg=bg_tertiary, fg=text_primary)
+        
+        # Обновление панели рекордов (перерисовка строк)
+        self._update_scores_display()
+    
+    def _toggle_theme(self):
+        """Переключение темы."""
+        self.theme_manager.toggle()
+        self._apply_theme_colors()
     
     def _create_game_panel(self):
-        game_frame = tk.Frame(self.main_container, bg="#1a1a2e")
-        game_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        game_frame = tk.Frame(self.main_container, bg=self.theme_manager.get("bg_primary"))
+        game_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=False)
+        
+        # Сохраняем ссылку для обновления темы
+        self.game_frame = game_frame
         
         self._create_header(game_frame)
         self._create_board_frame(game_frame)
         self._create_footer(game_frame)
     
     def _create_header(self, parent):
-        header = tk.Frame(parent, bg="#16213e", height=60)
+        bg = self.theme_manager.get("bg_secondary")
+        header = tk.Frame(parent, bg=bg, height=60)
         header.pack(fill=tk.X, padx=0, pady=(0, 10))
         header.pack_propagate(False)
-        
-        title = tk.Label(
+
+        # Сохраняем ссылки для обновления темы
+        self.header = header
+
+        self.header_title = tk.Label(
             header, text="🎮 Memory Game",
             font=("Segoe UI Emoji", 20, "bold"),
-            bg="#16213e", fg="#e94560",
+            bg=bg, fg=self.theme_manager.get("accent"),
         )
-        title.pack(side=tk.LEFT, padx=10)
-        
-        stats_frame = tk.Frame(header, bg="#16213e")
-        stats_frame.pack(side=tk.RIGHT, padx=10)
-        
+        self.header_title.pack(side=tk.LEFT, padx=10)
+
+        self.header_stats_frame = tk.Frame(header, bg=bg)
+        self.header_stats_frame.pack(side=tk.RIGHT, padx=10)
+
         self.moves_label = tk.Label(
-            stats_frame, text="Ходы: 0",
-            font=("Segoe UI", 14), bg="#16213e", fg="#ffffff",
+            self.header_stats_frame, text="Ходы: 0",
+            font=("Segoe UI", 14), bg=bg, fg=self.theme_manager.get("text_primary"),
         )
         self.moves_label.pack(side=tk.LEFT, padx=10)
-        
+
         self.pairs_label = tk.Label(
-            stats_frame, text="Пар: 0/0",
-            font=("Segoe UI", 14), bg="#16213e", fg="#ffffff",
+            self.header_stats_frame, text="Пар: 0/0",
+            font=("Segoe UI", 14), bg=bg, fg=self.theme_manager.get("text_primary"),
         )
         self.pairs_label.pack(side=tk.LEFT, padx=10)
+
+        self.theme_btn = tk.Button(
+            header, text="☀️" if self.theme_manager.is_dark() else "🌙",
+            font=("Segoe UI Emoji", 16),
+            bg=self.theme_manager.get("accent"), fg="#ffffff",
+            border=0, padx=12, pady=6, cursor="hand2",
+            command=self._toggle_theme,
+        )
+        self.theme_btn.pack(side=tk.RIGHT, padx=10)
     
     def _create_board_frame(self, parent):
-        self.board_container = tk.Frame(parent, bg="#1a1a2e")
+        bg = self.theme_manager.get("bg_primary")
+        self.board_container = tk.Frame(parent, bg=bg, width=600)
         self.board_container.pack(fill=tk.BOTH, expand=True, padx=0, pady=5)
+        self.board_container.pack_propagate(False)
         
-        self.board_canvas = tk.Canvas(self.board_container, bg="#1a1a2e", highlightthickness=0)
-        
-        v_scrollbar = ttk.Scrollbar(self.board_container, orient=tk.VERTICAL, command=self.board_canvas.yview)
-        h_scrollbar = ttk.Scrollbar(self.board_container, orient=tk.HORIZONTAL, command=self.board_canvas.xview)
-        
-        self.board_canvas.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
-        
-        self.cards_frame = tk.Frame(self.board_canvas, bg="#1a1a2e")
-        
+        self.board_canvas = tk.Canvas(self.board_container, bg=bg, highlightthickness=0)
+        self.cards_frame = tk.Frame(self.board_canvas, bg=bg)
         self.board_window = self.board_canvas.create_window((0, 0), window=self.cards_frame, anchor="nw")
         self.cards_frame.bind("<Configure>", self._on_frame_configure)
-        
-        v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
         self.board_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
         self.board_canvas.bind("<Configure>", self._on_canvas_resize)
         self.board_canvas.bind_all("<MouseWheel>", self._on_mousewheel)
     
@@ -117,97 +201,93 @@ class MemoryGameApp:
         self.board_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
     
     def _create_footer(self, parent):
-        footer = tk.Frame(parent, bg="#16213e", height=60)
+        bg = self.theme_manager.get("bg_secondary")
+        footer = tk.Frame(parent, bg=bg, height=60)
         footer.pack(fill=tk.X, padx=0, pady=(10, 0))
         footer.pack_propagate(False)
         
-        size_label = tk.Label(
+        # Сохраняем ссылку для обновления темы
+        self.footer = footer
+        
+        self.footer_size_label = tk.Label(
             footer, text="Размер:",
-            font=("Segoe UI", 12), bg="#16213e", fg="#ffffff",
+            font=("Segoe UI", 12), bg=bg, fg=self.theme_manager.get("text_primary"),
         )
-        size_label.pack(side=tk.LEFT, padx=10)
+        self.footer_size_label.pack(side=tk.LEFT, padx=10)
         
         self.size_var = tk.StringVar(value=DEFAULT_SIZE)
-        
-        size_combo = ttk.Combobox(
+        self.size_combo = ttk.Combobox(
             footer, textvariable=self.size_var,
             values=list(GAME_SIZES.keys()), state="readonly", width=8,
         )
-        size_combo.pack(side=tk.LEFT, padx=5)
-        size_combo.bind("<<ComboboxSelected>>", lambda e: self._on_size_selected(GAME_SIZES))
+        self.size_combo.pack(side=tk.LEFT, padx=5)
+        self.size_combo.bind("<<ComboboxSelected>>", lambda e: self._on_size_selected(GAME_SIZES))
         
-        new_game_btn = tk.Button(
+        self.new_game_btn = tk.Button(
             footer, text="🔄 Новая игра",
-            font=("Segoe UI", 12, "bold"), bg="#e94560", fg="#ffffff",
+            font=("Segoe UI", 12, "bold"), bg=self.theme_manager.get("accent"), fg="#ffffff",
             border=0, padx=20, pady=8, cursor="hand2", command=self._on_new_game,
         )
-        new_game_btn.pack(side=tk.RIGHT, padx=10)
-        
+        self.new_game_btn.pack(side=tk.RIGHT, padx=10)
         self.size_var.trace_add("write", self._on_size_change)
     
     def _create_scores_panel(self):
-        scores_frame = tk.Frame(self.main_container, bg="#16213e", width=280)
+        bg = self.theme_manager.get("bg_secondary")
+        scores_frame = tk.Frame(self.main_container, bg=bg, width=320)
         scores_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=(10, 0))
         scores_frame.pack_propagate(False)
         
-        title = tk.Label(
-            scores_frame, text="🏆 Рекорды",
-            font=("Segoe UI", 16, "bold"), bg="#16213e", fg="#e94560",
-        )
-        title.pack(pady=(10, 10))
+        # Сохраняем ссылки для обновления темы
+        self.scores_frame = scores_frame
         
-        filter_label = tk.Label(
-            scores_frame, text="Показать:",
-            font=("Segoe UI", 11), bg="#16213e", fg="#ffffff",
+        self.scores_title = tk.Label(
+            scores_frame, text="🏆 Рекорды",
+            font=("Segoe UI", 16, "bold"), bg=bg, fg=self.theme_manager.get("accent"),
         )
-        filter_label.pack(pady=(0, 5))
+        self.scores_title.pack(pady=(10, 10))
+        
+        self.scores_filter_label = tk.Label(
+            scores_frame, text="Показать:",
+            font=("Segoe UI", 11), bg=bg, fg=self.theme_manager.get("text_primary"),
+        )
+        self.scores_filter_label.pack(pady=(0, 5))
         
         self.score_size_var = tk.StringVar(value="Все")
         score_sizes = ["Все"] + list(GAME_SIZES.keys())
-        
-        score_filter = ttk.Combobox(
+        self.score_filter = ttk.Combobox(
             scores_frame, textvariable=self.score_size_var,
             values=score_sizes, state="readonly", width=10,
         )
-        score_filter.pack(pady=(0, 10))
-        score_filter.bind("<<ComboboxSelected>>", lambda e: self._update_scores_display())
+        self.score_filter.pack(pady=(0, 10))
+        self.score_filter.bind("<<ComboboxSelected>>", lambda e: self._update_scores_display())
         
-        scores_container = tk.Frame(scores_frame, bg="#1a1a2e")
+        scores_container = tk.Frame(scores_frame, bg=self.theme_manager.get("bg_primary"))
         scores_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        self.scores_canvas = tk.Canvas(scores_container, bg="#1a1a2e", highlightthickness=0)
-        scores_scrollbar = ttk.Scrollbar(scores_container, orient=tk.VERTICAL, command=self.scores_canvas.yview)
-        self.scores_canvas.configure(yscrollcommand=scores_scrollbar.set)
-        
-        self.scores_list_frame = tk.Frame(self.scores_canvas, bg="#1a1a2e")
+        self.scores_canvas = tk.Canvas(scores_container, bg=self.theme_manager.get("bg_primary"), highlightthickness=0)
+        self.scores_list_frame = tk.Frame(self.scores_canvas, bg=self.theme_manager.get("bg_primary"))
         self.scores_canvas.create_window((0, 0), window=self.scores_list_frame, anchor="nw")
         self.scores_list_frame.bind("<Configure>", lambda e: self.scores_canvas.configure(scrollregion=self.scores_canvas.bbox("all")))
-        
-        scores_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.scores_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
-        clear_btn = tk.Button(
+        self.clear_scores_btn = tk.Button(
             scores_frame, text="🗑️ Очистить",
-            font=("Segoe UI", 10), bg="#e94560", fg="#ffffff",
+            font=("Segoe UI", 10), bg=self.theme_manager.get("accent"), fg="#ffffff",
             border=0, padx=15, pady=5, cursor="hand2", command=self._clear_scores,
         )
-        clear_btn.pack(pady=10)
+        self.clear_scores_btn.pack(pady=10)
         
         self._update_scores_display()
     
     def _resize_cards(self):
         if not self.game:
             return
-        
         revealed_indices = [i for i, r in enumerate(self.game.revealed) if r]
         matched_indices = [i for i, m in enumerate(self.game.matched) if m]
-        
         for card in self.cards:
             card.destroy()
         self.cards.clear()
-        
         self._create_cards()
-        
         for i in revealed_indices:
             if i < len(self.cards):
                 self.cards[i].flip_show()
@@ -219,38 +299,44 @@ class MemoryGameApp:
         for widget in self.scores_list_frame.winfo_children():
             widget.destroy()
         
+        # Сохраняем ссылку на header для обновления при смене темы
+        self._scores_header_widgets = []
+
         filter_size = self.score_size_var.get()
         size = None if filter_size == "Все" else GAME_SIZES.get(filter_size)
-        
         scores = self.score_manager.get_top_scores(size=size, limit=10)
         
         if not scores:
             label = tk.Label(
                 self.scores_list_frame, text="Пока нет рекордов",
-                font=("Segoe UI", 11), bg="#1a1a2e", fg="#7f8c8d",
+                font=("Segoe UI", 11), bg=self.theme_manager.get("bg_primary"), fg=self.theme_manager.get("text_muted"),
             )
             label.pack(pady=20)
             return
         
-        header = tk.Frame(self.scores_list_frame, bg="#2c3e50")
+        bg_header = self.theme_manager.get("bg_tertiary")
+        header = tk.Frame(self.scores_list_frame, bg=bg_header)
         header.pack(fill=tk.X, pady=(0, 5))
         
-        tk.Label(header, text="#", font=("Segoe UI", 10, "bold"), bg="#2c3e50", fg="#ffffff", width=3).pack(side=tk.LEFT, padx=5)
-        tk.Label(header, text="Поле", font=("Segoe UI", 10, "bold"), bg="#2c3e50", fg="#ffffff", width=6).pack(side=tk.LEFT, padx=5)
-        tk.Label(header, text="Ходы", font=("Segoe UI", 10, "bold"), bg="#2c3e50", fg="#ffffff", width=6).pack(side=tk.LEFT, padx=5)
-        tk.Label(header, text="Дата", font=("Segoe UI", 10, "bold"), bg="#2c3e50", fg="#ffffff").pack(side=tk.LEFT, padx=5)
+        # Сохраняем ссылки на заголовки для обновления при смене темы
+        self._scores_header_widgets = [
+            tk.Label(header, text="#", font=("Segoe UI", 10, "bold"), bg=bg_header, fg=self.theme_manager.get("text_primary"), width=3),
+            tk.Label(header, text="Поле", font=("Segoe UI", 10, "bold"), bg=bg_header, fg=self.theme_manager.get("text_primary"), width=6),
+            tk.Label(header, text="Ходы", font=("Segoe UI", 10, "bold"), bg=bg_header, fg=self.theme_manager.get("text_primary"), width=6),
+            tk.Label(header, text="Дата", font=("Segoe UI", 10, "bold"), bg=bg_header, fg=self.theme_manager.get("text_primary"), width=14),
+        ]
+        for lbl in self._scores_header_widgets:
+            lbl.pack(side=tk.LEFT, padx=5)
         
         for i, score in enumerate(scores, 1):
-            row = tk.Frame(self.scores_list_frame, bg="#1a1a2e")
+            row = tk.Frame(self.scores_list_frame, bg=self.theme_manager.get("bg_primary"))
             row.pack(fill=tk.X, pady=1)
-            
-            bg_color = "#243342" if i % 2 == 0 else "#1a1a2e"
+            bg_color = self.theme_manager.get("bg_row_alt") if i % 2 == 0 else self.theme_manager.get("bg_primary")
             row.config(bg=bg_color)
-            
-            tk.Label(row, text=str(i), font=("Segoe UI", 10), bg=bg_color, fg="#ecf0f1", width=3, anchor="w").pack(side=tk.LEFT, padx=5)
-            tk.Label(row, text=f"{score['size']}×{score['size']}", font=("Segoe UI", 10), bg=bg_color, fg="#3498db", width=6, anchor="w").pack(side=tk.LEFT, padx=5)
-            tk.Label(row, text=str(score['moves']), font=("Segoe UI", 10, "bold"), bg=bg_color, fg="#e94560", width=6, anchor="w").pack(side=tk.LEFT, padx=5)
-            tk.Label(row, text=score['date'], font=("Segoe UI", 9), bg=bg_color, fg="#95a5a6").pack(side=tk.LEFT, padx=5)
+            tk.Label(row, text=str(i), font=("Segoe UI", 10), bg=bg_color, fg=self.theme_manager.get("text_primary"), width=3, anchor="w").pack(side=tk.LEFT, padx=5)
+            tk.Label(row, text=f"{score['size']}×{score['size']}", font=("Segoe UI", 10), bg=bg_color, fg=self.theme_manager.get("accent_blue"), width=6, anchor="w").pack(side=tk.LEFT, padx=5)
+            tk.Label(row, text=str(score['moves']), font=("Segoe UI", 10, "bold"), bg=bg_color, fg=self.theme_manager.get("accent"), width=6, anchor="w").pack(side=tk.LEFT, padx=5)
+            tk.Label(row, text=score['date'], font=("Segoe UI", 9), bg=bg_color, fg=self.theme_manager.get("text_muted"), width=14, anchor="w").pack(side=tk.LEFT, padx=5)
         
         if self.game:
             best = self.score_manager.get_best_for_size(self.game.size)
@@ -280,28 +366,24 @@ class MemoryGameApp:
         for card in self.cards:
             card.destroy()
         self.cards.clear()
-        
         self.game = MemoryGame(size)
         self._update_stats()
         self._create_cards()
-        
         self.score_size_var.set(f"{size}×{size}")
         self._update_scores_display()
     
     def _create_cards(self):
         if not self.game:
             return
-        
         card_size = self._calculate_card_size()
-        
         for i in range(len(self.game.board)):
             row = i // self.game.size
             col = i % self.game.size
             emoji = self.game.get_emoji(i)
-            
             card = CardWidget(
                 self.cards_frame, index=i, emoji=emoji,
                 on_click=self._on_card_click, size=card_size,
+                theme=self.theme_manager,
             )
             card.grid(row=row, column=col, padx=3, pady=3)
             self.cards.append(card)
@@ -309,47 +391,33 @@ class MemoryGameApp:
     def _calculate_card_size(self) -> int:
         if not self.game:
             return 60
-        
         self.root.update_idletasks()
         canvas_width = self.board_canvas.winfo_width()
         canvas_height = self.board_canvas.winfo_height()
-        
         available_width = canvas_width - 20
         available_height = canvas_height - 20
-        
         card_width = available_width // self.game.size - 6
         card_height = available_height // self.game.size - 6
-        
         card_size = min(card_width, card_height)
-        card_size = max(30, min(card_size, 120))
-        
-        return card_size
+        return max(30, min(card_size, 120))
     
     def _on_card_click(self, index: int):
         if not self.game:
             return
-        
         if not self.game.flip_card(index):
             return
-        
         self.cards[index].flip_show()
         self._update_stats()
-        
         if len(self.game.flipped) == 2:
             idx1, idx2 = self.game.flipped
-            
             if not self.game.matched[idx1]:
                 if self._flip_after_id:
                     self.root.after_cancel(self._flip_after_id)
-                
-                self._flip_after_id = self.root.after(
-                    800, lambda: self._hide_unmatched_cards(idx1, idx2),
-                )
+                self._flip_after_id = self.root.after(800, lambda: self._hide_unmatched_cards(idx1, idx2))
     
     def _hide_unmatched_cards(self, idx1: int, idx2: int):
         if not self.game:
             return
-        
         self.game.reset_flipped()
         self.cards[idx1].flip_hide()
         self.cards[idx2].flip_hide()
@@ -358,13 +426,10 @@ class MemoryGameApp:
     def _update_stats(self):
         if not self.game:
             return
-        
         found = sum(self.game.matched) // 2
         total = self.game.pairs_count
-        
         self.moves_label.config(text=f"Ходы: {self.game.moves}")
         self.pairs_label.config(text=f"Пар: {found}/{total}")
-        
         if self.game.game_over:
             self._on_game_won()
     
@@ -372,31 +437,27 @@ class MemoryGameApp:
         for card in self.cards:
             if card.is_flipped:
                 card.mark_matched()
-        
         self.score_manager.add_score(self.game.size, self.game.moves)
         self._update_scores_display()
         
         win_window = tk.Toplevel(self.root)
         win_window.title("🎉 Победа!")
         win_window.geometry("300x180")
-        win_window.configure(bg="#16213e")
-        
+        win_window.configure(bg=self.theme_manager.get("bg_secondary"))
         win_window.update_idletasks()
         x = (win_window.winfo_screenwidth() - 300) // 2
         y = (win_window.winfo_screenheight() - 180) // 2
         win_window.geometry(f"300x180+{x}+{y}")
-        
         win_window.after(10, lambda: win_window.grab_set())
         
         msg = tk.Label(
             win_window, text=f"🎉 Поздравляю!\n\nВы нашли все пары за {self.game.moves} ход.!",
-            font=("Segoe UI", 14), bg="#16213e", fg="#ffffff", justify=tk.CENTER,
+            font=("Segoe UI", 14), bg=self.theme_manager.get("bg_secondary"), fg=self.theme_manager.get("text_primary"), justify=tk.CENTER,
         )
         msg.pack(expand=True)
-        
         close_btn = tk.Button(
             win_window, text="Закрыть",
-            font=("Segoe UI", 11), bg="#e94560", fg="#ffffff",
+            font=("Segoe UI", 11), bg=self.theme_manager.get("accent"), fg="#ffffff",
             border=0, padx=20, pady=5, cursor="hand2", command=win_window.destroy,
         )
         close_btn.pack(pady=10)
