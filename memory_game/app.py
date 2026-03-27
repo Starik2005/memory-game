@@ -43,6 +43,7 @@ class MemoryGameApp:
         bg_secondary = self.theme_manager.get("bg_secondary")
         text_primary = self.theme_manager.get("text_primary")
         text_muted = self.theme_manager.get("text_muted")
+        accent = self.theme_manager.get("accent")
         
         # Основное окно
         self.root.configure(bg=bg_primary)
@@ -52,6 +53,12 @@ class MemoryGameApp:
         if hasattr(self, 'theme_btn'):
             self.theme_btn.config(text="☀️" if self.theme_manager.is_dark() else "🌙")
         
+        # Обновление header
+        if hasattr(self, 'header'):
+            self.header.configure(bg=bg_secondary)
+        if hasattr(self, 'header_title'):
+            self.header_title.configure(bg=bg_secondary, fg=accent)
+        
         # Обновление игрового поля
         if hasattr(self, 'board_container'):
             self.board_container.configure(bg=bg_primary)
@@ -60,17 +67,23 @@ class MemoryGameApp:
         if hasattr(self, 'cards_frame'):
             self.cards_frame.configure(bg=bg_primary)
         
+        # Обновление footer
+        if hasattr(self, 'footer'):
+            self.footer.configure(bg=bg_secondary)
+        if hasattr(self, 'footer_size_label'):
+            self.footer_size_label.configure(bg=bg_secondary, fg=text_primary)
+        
         # Обновление панели рекордов
         if hasattr(self, 'scores_frame'):
             self.scores_frame.configure(bg=bg_secondary)
+        if hasattr(self, 'scores_title'):
+            self.scores_title.configure(bg=bg_secondary, fg=accent)
+        if hasattr(self, 'scores_filter_label'):
+            self.scores_filter_label.configure(bg=bg_secondary, fg=text_primary)
         if hasattr(self, 'scores_canvas'):
             self.scores_canvas.configure(bg=bg_primary)
         if hasattr(self, 'scores_list_frame'):
             self.scores_list_frame.configure(bg=bg_primary)
-        
-        # Обновление footer
-        if hasattr(self, 'footer'):
-            self.footer.configure(bg=bg_secondary)
         
         # Перерисовка карточек с новой темой
         for card in self.cards:
@@ -113,28 +126,31 @@ class MemoryGameApp:
         header.pack(fill=tk.X, padx=0, pady=(0, 10))
         header.pack_propagate(False)
         
-        title = tk.Label(
+        # Сохраняем ссылку для обновления темы
+        self.header = header
+
+        self.header_title = tk.Label(
             header, text="🎮 Memory Game",
             font=("Segoe UI Emoji", 20, "bold"),
             bg=bg, fg=self.theme_manager.get("accent"),
         )
-        title.pack(side=tk.LEFT, padx=10)
-        
+        self.header_title.pack(side=tk.LEFT, padx=10)
+
         stats_frame = tk.Frame(header, bg=bg)
         stats_frame.pack(side=tk.RIGHT, padx=10)
-        
+
         self.moves_label = tk.Label(
             stats_frame, text="Ходы: 0",
             font=("Segoe UI", 14), bg=bg, fg=self.theme_manager.get("text_primary"),
         )
         self.moves_label.pack(side=tk.LEFT, padx=10)
-        
+
         self.pairs_label = tk.Label(
             stats_frame, text="Пар: 0/0",
             font=("Segoe UI", 14), bg=bg, fg=self.theme_manager.get("text_primary"),
         )
         self.pairs_label.pack(side=tk.LEFT, padx=10)
-        
+
         self.theme_btn = tk.Button(
             header, text="☀️" if self.theme_manager.is_dark() else "🌙",
             font=("Segoe UI Emoji", 16),
@@ -180,11 +196,11 @@ class MemoryGameApp:
         # Сохраняем ссылку для обновления темы
         self.footer = footer
         
-        size_label = tk.Label(
+        self.footer_size_label = tk.Label(
             footer, text="Размер:",
             font=("Segoe UI", 12), bg=bg, fg=self.theme_manager.get("text_primary"),
         )
-        size_label.pack(side=tk.LEFT, padx=10)
+        self.footer_size_label.pack(side=tk.LEFT, padx=10)
         
         self.size_var = tk.StringVar(value=DEFAULT_SIZE)
         self.size_combo = ttk.Combobox(
@@ -211,17 +227,17 @@ class MemoryGameApp:
         # Сохраняем ссылки для обновления темы
         self.scores_frame = scores_frame
         
-        title = tk.Label(
+        self.scores_title = tk.Label(
             scores_frame, text="🏆 Рекорды",
             font=("Segoe UI", 16, "bold"), bg=bg, fg=self.theme_manager.get("accent"),
         )
-        title.pack(pady=(10, 10))
+        self.scores_title.pack(pady=(10, 10))
         
-        filter_label = tk.Label(
+        self.scores_filter_label = tk.Label(
             scores_frame, text="Показать:",
             font=("Segoe UI", 11), bg=bg, fg=self.theme_manager.get("text_primary"),
         )
-        filter_label.pack(pady=(0, 5))
+        self.scores_filter_label.pack(pady=(0, 5))
         
         self.score_size_var = tk.StringVar(value="Все")
         score_sizes = ["Все"] + list(GAME_SIZES.keys())
